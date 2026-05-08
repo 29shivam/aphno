@@ -7,6 +7,10 @@ export async function healthRoutes(app: FastifyInstance) {
     '/v1/health',
     {
       schema: {
+        tags: ['health'],
+        summary: 'Service health check',
+        description:
+          'Returns uptime, DB connectivity, and current user count. Used by load balancers and for sanity checks during deploys.',
         response: { 200: HealthResponseSchema },
       },
     },
