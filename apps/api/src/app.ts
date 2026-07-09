@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
@@ -8,11 +8,18 @@ import {
   serializerCompiler,
   validatorCompiler,
   jsonSchemaTransform,
+  hasZodFastifySchemaValidationErrors,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import { logger } from './platform/logger.js';
 import { env } from './platform/env.js';
+import authPlugin from './platform/auth.plugin.js';
 import { healthRoutes } from './modules/health/health.routes.js';
+import { authRoutes } from './modules/auth/auth.routes.js';
+import { usersRoutes } from './modules/users/users.routes.js';
+import { groupsRoutes } from './modules/groups/groups.routes.js';
+import { expensesRoutes } from './modules/expenses/expenses.routes.js';
+import { settlementsRoutes } from './modules/settlements/settlements.routes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -23,6 +30,33 @@ export async function buildApp() {
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+
+  // Must be set BEFORE routes: child encapsulation contexts snapshot the
+  // error handler at register() time, so a later call wouldn't reach them.
+  app.setErrorHandler((err: FastifyError, req, reply) => {
+    // Zod body/params/query validation failures → 400 with field details.
+    if (hasZodFastifySchemaValidationErrors(err)) {
+      return reply.status(400).send({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'request failed validation',
+          details: { issues: err.validation },
+        },
+      });
+    }
+
+    const statusCode = err.statusCode ?? 500;
+    // Only 5xx are unexpected; log those loudly, keep 4xx quiet.
+    if (statusCode >= 500) {
+      req.log.error({ err }, 'unhandled error');
+    }
+    return reply.status(statusCode).send({
+      error: {
+        code: err.code ?? (statusCode >= 500 ? 'INTERNAL_ERROR' : 'BAD_REQUEST'),
+        message: statusCode >= 500 ? 'Something went wrong' : err.message,
+      },
+    });
+  });
 
   // helmet's default CSP blocks swagger-ui inline assets — relax in dev only
   await app.register(helmet, {
@@ -69,17 +103,14 @@ export async function buildApp() {
     },
   });
 
-  await app.register(healthRoutes);
+  await app.register(authPlugin);
 
-  app.setErrorHandler((err, _req, reply) => {
-    app.log.error({ err }, 'unhandled error');
-    reply.status(err.statusCode ?? 500).send({
-      error: {
-        code: err.code ?? 'INTERNAL_ERROR',
-        message: err.message ?? 'Something went wrong',
-      },
-    });
-  });
+  await app.register(healthRoutes);
+  await app.register(authRoutes);
+  await app.register(usersRoutes);
+  await app.register(groupsRoutes);
+  await app.register(expensesRoutes);
+  await app.register(settlementsRoutes);
 
   return app;
 }

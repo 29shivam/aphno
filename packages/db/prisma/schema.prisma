@@ -8,13 +8,147 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Week 0 — minimal schema. Splits/expenses tables come in week 2.
+// ─────────────────────────────────────────────────────────────
+// APHNO — UPI-native splits + financial intelligence
+// All monetary amounts are stored as INTEGER PAISE (₹1 = 100).
+// ─────────────────────────────────────────────────────────────
+
 model User {
   id        String   @id @default(uuid()) @db.Uuid
   phone     String   @unique @db.VarChar(15)
   name      String?
+  upiId     String?  @map("upi_id")
+  avatarUrl String?  @map("avatar_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  memberships     GroupMember[]
+  createdGroups   Group[]        @relation("GroupCreatedBy")
+  expensesPaid    Expense[]      @relation("ExpensePaidBy")
+  expensesCreated Expense[]      @relation("ExpenseCreatedBy")
+  splits          ExpenseSplit[]
+  settlementsFrom Settlement[]   @relation("SettlementFrom")
+  settlementsTo   Settlement[]   @relation("SettlementTo")
+
   @@map("users")
+}
+
+// One-time-password challenge for phone auth.
+model OtpChallenge {
+  id        String    @id @default(uuid()) @db.Uuid
+  phone     String    @db.VarChar(15)
+  codeHash  String    @map("code_hash")
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([phone])
+  @@map("otp_challenges")
+}
+
+model Group {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy   User          @relation("GroupCreatedBy", fields: [createdById], references: [id])
+  members     GroupMember[]
+  expenses    Expense[]
+  settlements Settlement[]
+
+  @@index([createdById])
+  @@map("groups")
+}
+
+enum GroupRole {
+  OWNER
+  MEMBER
+}
+
+model GroupMember {
+  id       String    @id @default(uuid()) @db.Uuid
+  groupId  String    @map("group_id") @db.Uuid
+  userId   String    @map("user_id") @db.Uuid
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now()) @map("joined_at")
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENT
+}
+
+model Expense {
+  id          String    @id @default(uuid()) @db.Uuid
+  groupId     String    @map("group_id") @db.Uuid
+  description String
+  amount      Int // total, in paise
+  currency    String    @default("INR") @db.VarChar(3)
+  splitType   SplitType @default(EQUAL) @map("split_type")
+  paidById    String    @map("paid_by_id") @db.Uuid
+  createdById String    @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  group     Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy    User           @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  createdBy User           @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  splits    ExpenseSplit[]
+
+  @@index([groupId])
+  @@map("expenses")
+}
+
+// Each row = how much `userId` owes for this expense (their share), in paise.
+model ExpenseSplit {
+  id        String @id @default(uuid()) @db.Uuid
+  expenseId String @map("expense_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+  amount    Int // owed share, in paise
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+  @@map("expense_splits")
+}
+
+enum SettlementStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Settlement {
+  id         String           @id @default(uuid()) @db.Uuid
+  groupId    String           @map("group_id") @db.Uuid
+  fromUserId String           @map("from_user_id") @db.Uuid
+  toUserId   String           @map("to_user_id") @db.Uuid
+  amount     Int // in paise
+  status     SettlementStatus @default(PENDING)
+  method     String           @default("UPI")
+  upiTxnRef  String?          @map("upi_txn_ref")
+  note       String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  settledAt  DateTime?        @map("settled_at")
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser User  @relation("SettlementFrom", fields: [fromUserId], references: [id])
+  toUser   User  @relation("SettlementTo", fields: [toUserId], references: [id])
+
+  @@index([groupId])
+  @@map("settlements")
 }

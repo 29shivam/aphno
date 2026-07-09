@@ -1,12 +1,103 @@
-import { HealthResponseSchema, type HealthResponse } from '@aphno/shared';
+import type {
+  AuthTokenResponse,
+  CreateExpense,
+  CreateSettlement,
+  Expense,
+  Group,
+  GroupBalances,
+  GroupDetail,
+  HealthResponse,
+  OtpRequestResponse,
+  Settlement,
+  UpdateProfile,
+  User,
+} from '@aphno/shared';
+import { storage } from '../lib/storage';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
 if (!BASE_URL) throw new Error('EXPO_PUBLIC_API_URL is not set');
 
-export async function fetchHealth(): Promise<HealthResponse> {
-  const res = await fetch(`${BASE_URL}/v1/health`);
-  if (!res.ok) throw new Error(`health failed: ${res.status}`);
-  const json = await res.json();
-  return HealthResponseSchema.parse(json);
+const TOKEN_KEY = 'aphno.token';
+
+export const auth = {
+  token: storage.get(TOKEN_KEY),
+  set(token: string) {
+    this.token = token;
+    storage.set(TOKEN_KEY, token);
+  },
+  clear() {
+    this.token = null;
+    storage.remove(TOKEN_KEY);
+  },
+};
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+  }
 }
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: {
+      'content-type': 'application/json',
+      ...(auth.token ? { authorization: `Bearer ${auth.token}` } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+
+  if (res.status === 204) return undefined as T;
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = (json as { error?: { code?: string; message?: string } }).error;
+    throw new ApiError(res.status, err?.code ?? 'ERROR', err?.message ?? `HTTP ${res.status}`);
+  }
+  return json as T;
+}
+
+export const api = {
+  health: () => request<HealthResponse>('GET', '/v1/health'),
+
+  // auth
+  requestOtp: (phone: string) =>
+    request<OtpRequestResponse>('POST', '/v1/auth/otp/request', { phone }),
+  verifyOtp: (phone: string, code: string) =>
+    request<AuthTokenResponse>('POST', '/v1/auth/otp/verify', { phone, code }),
+
+  // users
+  me: () => request<User>('GET', '/v1/users/me'),
+  updateMe: (patch: UpdateProfile) => request<User>('PATCH', '/v1/users/me', patch),
+
+  // groups
+  listGroups: () => request<Group[]>('GET', '/v1/groups'),
+  createGroup: (name: string, memberPhones?: string[]) =>
+    request<GroupDetail>('POST', '/v1/groups', { name, memberPhones }),
+  getGroup: (id: string) => request<GroupDetail>('GET', `/v1/groups/${id}`),
+  addMember: (id: string, phone: string, name?: string) =>
+    request<GroupDetail>('POST', `/v1/groups/${id}/members`, { phone, name }),
+  balances: (id: string) => request<GroupBalances>('GET', `/v1/groups/${id}/balances`),
+
+  // expenses
+  listExpenses: (groupId: string) => request<Expense[]>('GET', `/v1/groups/${groupId}/expenses`),
+  addExpense: (groupId: string, body: CreateExpense) =>
+    request<Expense>('POST', `/v1/groups/${groupId}/expenses`, body),
+  deleteExpense: (id: string) => request<void>('DELETE', `/v1/expenses/${id}`),
+
+  // settlements
+  listSettlements: (groupId: string) =>
+    request<Settlement[]>('GET', `/v1/groups/${groupId}/settlements`),
+  createSettlement: (groupId: string, body: CreateSettlement) =>
+    request<Settlement>('POST', `/v1/groups/${groupId}/settlements`, body),
+  completeSettlement: (id: string, upiTxnRef?: string) =>
+    request<Settlement>('POST', `/v1/settlements/${id}/complete`, { upiTxnRef }),
+};
+
+// ₹ formatting helpers (amounts are integer paise).
+export const rupees = (paise: number) => `₹${(paise / 100).toFixed(2)}`;
+export const toPaise = (rupeeStr: string) => Math.round(parseFloat(rupeeStr) * 100);
