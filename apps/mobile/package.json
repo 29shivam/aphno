@@ -6,7 +6,8 @@
     "start": "EXPO_USE_METRO_WORKSPACE_ROOT=1 expo start",
     "android": "EXPO_USE_METRO_WORKSPACE_ROOT=1 expo start --android",
     "ios": "EXPO_USE_METRO_WORKSPACE_ROOT=1 expo start --ios",
-    "web": "EXPO_USE_METRO_WORKSPACE_ROOT=1 expo start --web"
+    "web": "EXPO_USE_METRO_WORKSPACE_ROOT=1 expo start --web",
+    "web:export": "expo export --platform web --output-dir dist"
   },
   "dependencies": {
     "@aphno/shared": "workspace:*",
