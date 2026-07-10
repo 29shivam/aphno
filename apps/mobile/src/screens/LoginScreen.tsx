@@ -48,7 +48,7 @@ export function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.hero}>
-        <Text style={styles.logo}>APHNO</Text>
+        <Text style={styles.logo}>aphno.ai</Text>
         <Text style={styles.tagline}>Split bills. Settle over UPI.</Text>
       </View>
 
@@ -99,7 +99,7 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, justifyContent: 'center', padding: 24 },
   hero: { alignItems: 'center', marginBottom: 40 },
-  logo: { color: colors.text, fontSize: 40, fontWeight: '800', letterSpacing: 4 },
+  logo: { color: colors.text, fontSize: 40, fontWeight: '800', letterSpacing: 0.5 },
   tagline: { color: colors.muted, fontSize: 15, marginTop: 8 },
   form: { width: '100%', maxWidth: 420, alignSelf: 'center' },
   label: { color: colors.muted, fontSize: 13, marginBottom: 8, marginLeft: 4 },

@@ -68,7 +68,7 @@ export async function buildApp() {
   await app.register(swagger, {
     openapi: {
       info: {
-        title: 'APHNO API',
+        title: 'aphno.ai API',
         description: 'UPI-native splits + financial intelligence',
         version: '0.0.0',
       },

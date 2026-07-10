@@ -9,7 +9,7 @@ datasource db {
 }
 
 // ─────────────────────────────────────────────────────────────
-// APHNO — UPI-native splits + financial intelligence
+// aphno.ai — UPI-native splits + financial intelligence
 // All monetary amounts are stored as INTEGER PAISE (₹1 = 100).
 // ─────────────────────────────────────────────────────────────
 

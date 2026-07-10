@@ -1,4 +1,4 @@
-# Deploying APHNO
+# Deploying aphno.ai
 
 - **Database** — Neon (managed Postgres), already provisioned.
 - **API** — Railway, from the root `Dockerfile`.

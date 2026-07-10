@@ -1,4 +1,4 @@
-# APHNO
+# aphno.ai
 
 **UPI-native expense splitting + financial intelligence.** Split bills in groups,
 track who owes whom, and settle up in one tap via a UPI deep link.

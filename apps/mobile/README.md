@@ -1,4 +1,4 @@
-# APHNO — mobile & web app
+# aphno.ai — mobile & web app
 
 One Expo (React Native) codebase that runs as a **web app** and a **downloadable
 Android/iOS app**. Talks to `@aphno/api`.

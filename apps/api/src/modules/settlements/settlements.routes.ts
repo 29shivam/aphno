@@ -150,7 +150,7 @@ function serializeSettlement(s: SettlementWithPayee) {
         payeeVpa: s.toUser.upiId,
         payeeName: s.toUser.name,
         amountPaise: s.amount,
-        note: s.note ?? 'APHNO settle-up',
+        note: s.note ?? 'aphno.ai settle-up',
       })
     : null;
 
