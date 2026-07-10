@@ -46,7 +46,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
-      'content-type': 'application/json',
+      // Only set a JSON content-type when there's actually a body — otherwise
+      // Fastify rejects bodyless DELETE/POST with FST_ERR_CTP_EMPTY_JSON_BODY.
+      ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
       ...(auth.token ? { authorization: `Bearer ${auth.token}` } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
