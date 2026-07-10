@@ -27,9 +27,14 @@ export interface JwtPayload {
   exp: number;
 }
 
-export function signJwt(payload: { sub: string; phone: string }): string {
+export function signJwt(payload: { sub: string; phone: string | null }): string {
   const now = Math.floor(Date.now() / 1000);
-  const body: JwtPayload = { ...payload, iat: now, exp: now + env.JWT_TTL_SEC };
+  const body: JwtPayload = {
+    sub: payload.sub,
+    phone: payload.phone ?? '',
+    iat: now,
+    exp: now + env.JWT_TTL_SEC,
+  };
   const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const claims = b64url(JSON.stringify(body));
   const unsigned = `${header}.${claims}`;

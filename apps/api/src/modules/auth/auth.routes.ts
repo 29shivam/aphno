@@ -4,6 +4,7 @@ import { prisma } from '@aphno/db';
 import {
   ApiErrorSchema,
   AuthTokenResponseSchema,
+  GoogleAuthSchema,
   OtpRequestResponseSchema,
   OtpRequestSchema,
   OtpVerifySchema,
@@ -11,6 +12,7 @@ import {
 import { env, isProd } from '../../platform/env.js';
 import { generateOtp, hashOtp, signJwt, verifyOtp } from '../../platform/crypto.js';
 import { sendOtpSms } from '../../platform/sms.js';
+import { verifyGoogleIdToken } from '../../platform/google.js';
 import { normalizePhone } from '../../platform/phone.js';
 import { toUserDto } from '../users/user.dto.js';
 
@@ -105,6 +107,58 @@ export async function authRoutes(fastify: FastifyInstance) {
             where: { phone },
             create: { phone },
             update: {},
+          });
+        },
+        { maxWait: 5000, timeout: 15000 },
+      );
+
+      const token = signJwt({ sub: user.id, phone: user.phone });
+      return { token, user: toUserDto(user) };
+    },
+  );
+
+  // ── Google sign-in ──────────────────────────────────────────────────────────
+  app.post(
+    '/v1/auth/google',
+    {
+      schema: {
+        tags: ['auth'],
+        summary: 'Sign in with a Google ID token',
+        description:
+          'Verifies a Google ID token, creates or links the user by Google account / email, and returns a JWT bearer token.',
+        body: GoogleAuthSchema,
+        response: { 200: AuthTokenResponseSchema, 401: ApiErrorSchema },
+      },
+    },
+    async (req) => {
+      const profile = await verifyGoogleIdToken(req.body.idToken);
+
+      // Match by Google id first, then by email; otherwise create.
+      const user = await prisma.$transaction(
+        async (tx) => {
+          const existing =
+            (await tx.user.findUnique({ where: { googleId: profile.sub } })) ??
+            (await tx.user.findUnique({ where: { email: profile.email } }));
+
+          if (existing) {
+            return tx.user.update({
+              where: { id: existing.id },
+              data: {
+                googleId: profile.sub,
+                email: profile.email,
+                name: existing.name ?? profile.name,
+                avatarUrl: existing.avatarUrl ?? profile.picture,
+              },
+            });
+          }
+
+          return tx.user.create({
+            data: {
+              googleId: profile.sub,
+              email: profile.email,
+              name: profile.name,
+              avatarUrl: profile.picture,
+            },
           });
         },
         { maxWait: 5000, timeout: 15000 },

@@ -35,7 +35,8 @@ export function GroupDetailScreen({ groupId, onBack }: { groupId: string; onBack
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
-    for (const mem of group.data?.members ?? []) m.set(mem.userId, mem.name ?? mem.phone);
+    for (const mem of group.data?.members ?? [])
+      m.set(mem.userId, mem.name ?? mem.phone ?? 'Member');
     return m;
   }, [group.data]);
 

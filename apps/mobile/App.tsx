@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './src/state/auth';
@@ -19,7 +19,9 @@ function Root() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <Image source={require('./assets/logo.png')} style={styles.splashLogo} resizeMode="cover" />
+        <Text style={styles.splashBrand}>aphno.ai</Text>
+        <ActivityIndicator size="small" color={colors.accent} style={{ marginTop: 20 }} />
       </View>
     );
   }
@@ -49,4 +51,12 @@ export default function App() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  splashLogo: { width: 96, height: 96, borderRadius: 24 },
+  splashBrand: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+    marginTop: 16,
+    letterSpacing: 0.3,
+  },
 });

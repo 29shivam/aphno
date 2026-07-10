@@ -69,6 +69,8 @@ export const api = {
     request<OtpRequestResponse>('POST', '/v1/auth/otp/request', { phone }),
   verifyOtp: (phone: string, code: string) =>
     request<AuthTokenResponse>('POST', '/v1/auth/otp/verify', { phone, code }),
+  googleAuth: (idToken: string) =>
+    request<AuthTokenResponse>('POST', '/v1/auth/google', { idToken }),
 
   // users
   me: () => request<User>('GET', '/v1/users/me'),

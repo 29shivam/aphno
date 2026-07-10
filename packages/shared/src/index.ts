@@ -47,7 +47,8 @@ export type ApiError = z.infer<typeof ApiErrorSchema>;
 
 export const UserSchema = z.object({
   id: uuid,
-  phone: z.string(),
+  phone: z.string().nullable(),
+  email: z.string().nullable(),
   name: z.string().nullable(),
   upiId: z.string().nullable(),
   avatarUrl: z.string().nullable(),
@@ -93,6 +94,12 @@ export const AuthTokenResponseSchema = z.object({
 });
 export type AuthTokenResponse = z.infer<typeof AuthTokenResponseSchema>;
 
+// Google OAuth: client obtains an ID token from Google and sends it here.
+export const GoogleAuthSchema = z.object({
+  idToken: z.string().min(1),
+});
+export type GoogleAuth = z.infer<typeof GoogleAuthSchema>;
+
 // ─────────────────────────────────────────────────────────────
 // Groups
 // ─────────────────────────────────────────────────────────────
@@ -102,7 +109,7 @@ export const GroupRoleSchema = z.enum(['OWNER', 'MEMBER']);
 export const GroupMemberSchema = z.object({
   userId: uuid,
   name: z.string().nullable(),
-  phone: z.string(),
+  phone: z.string().nullable(),
   upiId: z.string().nullable(),
   role: GroupRoleSchema,
 });

@@ -23,6 +23,8 @@ const EnvSchema = z.object({
   TWILIO_API_KEY_SID: z.string().optional(),
   TWILIO_API_KEY_SECRET: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
+  // Google OAuth Web Client ID (public). Required for Google sign-in.
+  GOOGLE_CLIENT_ID: z.string().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);

@@ -15,7 +15,10 @@ datasource db {
 
 model User {
   id        String   @id @default(uuid()) @db.Uuid
-  phone     String   @unique @db.VarChar(15)
+  // Auth identifiers: phone (OTP) and/or email+googleId (Google OAuth).
+  phone     String?  @unique @db.VarChar(15)
+  email     String?  @unique
+  googleId  String?  @unique @map("google_id")
   name      String?
   upiId     String?  @map("upi_id")
   avatarUrl String?  @map("avatar_url")
