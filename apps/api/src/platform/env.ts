@@ -16,8 +16,12 @@ const EnvSchema = z.object({
   OTP_TTL_SEC: z.coerce.number().int().positive().default(300), // 5 min
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   // Twilio SMS (optional — if unset, OTPs are logged instead of sent).
+  // Account SID (AC…) is always needed for the request URL. Authenticate with
+  // EITHER an API Key (SK… + secret, recommended) OR the account Auth Token.
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_API_KEY_SID: z.string().optional(),
+  TWILIO_API_KEY_SECRET: z.string().optional(),
   TWILIO_FROM_NUMBER: z.string().optional(),
 });
 
