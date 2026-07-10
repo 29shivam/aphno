@@ -5,16 +5,23 @@ Android/iOS app**. Talks to `@aphno/api`.
 
 ## Configure
 
-Set the API base URL in `apps/mobile/.env`:
+Copy `.env.example` to `apps/mobile/.env` and set:
 
 ```
 EXPO_PUBLIC_API_URL=http://localhost:4000        # web dev
 # EXPO_PUBLIC_API_URL=http://192.168.0.98:4000   # physical device / APK (use your LAN IP)
 # EXPO_PUBLIC_API_URL=https://api.aphno.app       # production
+
+EXPO_PUBLIC_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com   # Google sign-in
 ```
 
 A real device (or an installed APK) **cannot reach `localhost`** — point it at
 your machine's LAN IP or a deployed API.
+
+**Google sign-in** needs `EXPO_PUBLIC_GOOGLE_CLIENT_ID` (a Web OAuth client ID
+from the Google Cloud Console). It must be the **same** value as `GOOGLE_CLIENT_ID`
+on the API — the backend verifies the token's audience against it. Set the same
+value in the Vercel project's env vars for the deployed web app.
 
 ## Run the web app
 
