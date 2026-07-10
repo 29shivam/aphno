@@ -40,10 +40,26 @@ export function LoginScreen() {
   }, [anim]);
 
   // Google OAuth. useIdTokenAuthRequest (response_type=id_token) so Google
-  // returns the ID token our API verifies — useAuthRequest yields only an
-  // access token, which the backend can't validate.
+  // returns the ID token our API verifies. The hook throws an invariant when the
+  // *current platform's* client id is missing (web→webClientId, iOS→iosClientId,
+  // Android→androidClientId), so we pass a harmless placeholder for any that are
+  // unset and gate the button on `googleConfigured` — a missing client id
+  // disables Google sign-in on that platform instead of crashing the screen.
+  const googlePlaceholder = 'unconfigured.apps.googleusercontent.com';
+  const googleWebId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+  const googleIosId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+  const googleAndroidId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  const googleConfigured =
+    Platform.select({
+      web: Boolean(googleWebId),
+      ios: Boolean(googleIosId),
+      android: Boolean(googleAndroidId),
+      default: false,
+    }) ?? false;
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    webClientId: googleWebId ?? googlePlaceholder,
+    iosClientId: googleIosId ?? googlePlaceholder,
+    androidClientId: googleAndroidId ?? googlePlaceholder,
   });
 
   useEffect(() => {
@@ -76,7 +92,7 @@ export function LoginScreen() {
   }
 
   async function onGoogle() {
-    if (!request) {
+    if (!googleConfigured || !request) {
       setError('Google sign-in is not configured yet');
       return;
     }
@@ -192,6 +208,7 @@ export function LoginScreen() {
       </Animated.View>
 
       <Text style={styles.footer}>UPI-native · secure by design</Text>
+      <Text style={styles.copyright}>© 2026 aphno Inc. All rights reserved.</Text>
     </KeyboardAvoidingView>
   );
 }
@@ -266,5 +283,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 24,
+  },
+  copyright: {
+    color: colors.faint,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 6,
+    opacity: 0.8,
   },
 });
