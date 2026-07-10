@@ -39,8 +39,10 @@ export function LoginScreen() {
     }).start();
   }, [anim]);
 
-  // Google OAuth
-  const [request, response, promptAsync] = Google.useAuthRequest({
+  // Google OAuth. useIdTokenAuthRequest (response_type=id_token) so Google
+  // returns the ID token our API verifies — useAuthRequest yields only an
+  // access token, which the backend can't validate.
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
   });
 
