@@ -6,6 +6,7 @@ import {
   ApiErrorSchema,
   CreateExpenseSchema,
   ExpenseSchema,
+  UpdateExpenseSchema,
   uuid,
   type CreateExpense,
 } from '@aphno/shared';
@@ -129,6 +130,76 @@ export async function expensesRoutes(fastify: FastifyInstance) {
         orderBy: { createdAt: 'desc' },
       });
       return expenses.map(serializeExpense);
+    },
+  );
+
+  // ── Update an expense ───────────────────────────────────────────────────────
+  app.patch(
+    '/v1/expenses/:id',
+    {
+      preHandler: app.authenticate,
+      schema: {
+        tags: ['expenses'],
+        summary: 'Update an expense',
+        description:
+          'Replaces an expense’s description, amount, and split. Splits are recomputed and swapped atomically; the payer defaults to the existing one.',
+        security: [{ bearerAuth: [] }],
+        params: ExpenseIdParam,
+        body: UpdateExpenseSchema,
+        response: {
+          200: ExpenseSchema,
+          403: ApiErrorSchema,
+          404: ApiErrorSchema,
+          422: ApiErrorSchema,
+        },
+      },
+    },
+    async (req, reply) => {
+      const existing = await prisma.expense.findFirst({
+        where: { id: req.params.id, deletedAt: null },
+        select: { groupId: true, paidById: true },
+      });
+      if (!existing) {
+        return reply
+          .status(404)
+          .send({ error: { code: 'EXPENSE_NOT_FOUND', message: 'expense not found' } });
+      }
+      await assertMember(existing.groupId, req.userId);
+
+      const members = await prisma.groupMember.findMany({
+        where: { groupId: existing.groupId },
+        select: { userId: true },
+      });
+      const memberIds = new Set(members.map((m) => m.userId));
+
+      const paidById = req.body.paidById ?? existing.paidById;
+      if (!memberIds.has(paidById)) {
+        return reply
+          .status(422)
+          .send({ error: { code: 'INVALID_EXPENSE', message: 'payer is not in this group' } });
+      }
+
+      const shares = buildShares(req.body, memberIds);
+
+      // Swap splits atomically so balances never observe a partial update.
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.expenseSplit.deleteMany({ where: { expenseId: req.params.id } });
+        return tx.expense.update({
+          where: { id: req.params.id },
+          data: {
+            description: req.body.description,
+            amount: req.body.amount,
+            splitType: req.body.splitType,
+            paidById,
+            splits: {
+              create: [...shares.entries()].map(([userId, amount]) => ({ userId, amount })),
+            },
+          },
+          include: { splits: true },
+        });
+      });
+
+      return serializeExpense(updated);
     },
   );
 

@@ -174,6 +174,11 @@ export const CreateExpenseSchema = z
   });
 export type CreateExpense = z.infer<typeof CreateExpenseSchema>;
 
+// Editing replaces the whole expense (description, amount, split) — same shape
+// as create. paidById is optional and defaults to the existing payer.
+export const UpdateExpenseSchema = CreateExpenseSchema;
+export type UpdateExpense = CreateExpense;
+
 export const ExpenseSplitSchema = z.object({
   userId: uuid,
   amount: z.number().int(), // owed share in paise

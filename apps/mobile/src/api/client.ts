@@ -1,6 +1,7 @@
 import type {
   AuthTokenResponse,
   CreateExpense,
+  UpdateExpense,
   CreateSettlement,
   Expense,
   Group,
@@ -89,6 +90,8 @@ export const api = {
   listExpenses: (groupId: string) => request<Expense[]>('GET', `/v1/groups/${groupId}/expenses`),
   addExpense: (groupId: string, body: CreateExpense) =>
     request<Expense>('POST', `/v1/groups/${groupId}/expenses`, body),
+  updateExpense: (id: string, body: UpdateExpense) =>
+    request<Expense>('PATCH', `/v1/expenses/${id}`, body),
   deleteExpense: (id: string) => request<void>('DELETE', `/v1/expenses/${id}`),
 
   // settlements
