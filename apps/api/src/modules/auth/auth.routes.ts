@@ -10,6 +10,7 @@ import {
 } from '@aphno/shared';
 import { env, isProd } from '../../platform/env.js';
 import { generateOtp, hashOtp, signJwt, verifyOtp } from '../../platform/crypto.js';
+import { sendOtpSms } from '../../platform/sms.js';
 import { normalizePhone } from '../../platform/phone.js';
 import { toUserDto } from '../users/user.dto.js';
 
@@ -38,8 +39,8 @@ export async function authRoutes(fastify: FastifyInstance) {
         data: { phone, codeHash: hashOtp(phone, code), expiresAt },
       });
 
-      // TODO(prod): dispatch `code` via SMS provider instead of logging.
-      req.log.info({ phone, code }, 'otp issued');
+      // Deliver the code via SMS (Twilio). Falls back to logging when unconfigured.
+      await sendOtpSms(phone, code);
 
       return {
         requestId: challenge.id,

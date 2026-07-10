@@ -15,6 +15,10 @@ const EnvSchema = z.object({
     .default(60 * 60 * 24 * 30), // 30d
   OTP_TTL_SEC: z.coerce.number().int().positive().default(300), // 5 min
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  // Twilio SMS (optional — if unset, OTPs are logged instead of sent).
+  TWILIO_ACCOUNT_SID: z.string().optional(),
+  TWILIO_AUTH_TOKEN: z.string().optional(),
+  TWILIO_FROM_NUMBER: z.string().optional(),
 });
 
 export const env = EnvSchema.parse(process.env);
