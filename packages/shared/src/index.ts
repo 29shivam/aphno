@@ -221,6 +221,9 @@ export type Debt = z.infer<typeof DebtSchema>;
 export const GroupBalancesSchema = z.object({
   balances: z.array(BalanceSchema),
   debts: z.array(DebtSchema),
+  // Distinct person→person IOUs before minimization; the gap vs `debts.length`
+  // is what smart settle-up saves.
+  naiveTransferCount: z.number().int(),
 });
 export type GroupBalances = z.infer<typeof GroupBalancesSchema>;
 

@@ -231,6 +231,11 @@ export function GroupDetailScreen({ groupId, onBack }: { groupId: string; onBack
   // Debts where the current user is the one who owes.
   const myDebts = (balances.data?.debts ?? []).filter((d) => d.fromUserId === user?.id);
 
+  // Smart settle-up: how many raw IOUs the minimal-transfer graph collapsed.
+  const totalTransfers = balances.data?.debts.length ?? 0;
+  const naiveTransfers = balances.data?.naiveTransferCount ?? 0;
+  const smartSaved = naiveTransfers - totalTransfers;
+
   return (
     <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content}>
       <Pressable onPress={onBack} hitSlop={12}>
@@ -265,11 +270,22 @@ export function GroupDetailScreen({ groupId, onBack }: { groupId: string; onBack
         )}
       </Card>
 
-      {/* Settle up */}
+      {/* Smart settle-up */}
       {myDebts.length > 0 ? (
         <>
-          <Text style={styles.section}>Settle up</Text>
+          <View style={styles.sectionRow}>
+            <Text style={styles.section}>Smart settle-up</Text>
+            {smartSaved > 0 ? (
+              <Pill tone="positive" label={`${naiveTransfers} → ${totalTransfers}`} />
+            ) : null}
+          </View>
           <Card style={{ marginBottom: 16 }}>
+            {smartSaved > 0 ? (
+              <Text style={styles.smartLine}>
+                ⚡ Minimized {naiveTransfers} back-and-forth IOUs into just {totalTransfers} payment
+                {totalTransfers === 1 ? '' : 's'} — settle in the fewest taps.
+              </Text>
+            ) : null}
             {myDebts.map((d) => (
               <View key={d.toUserId} style={styles.settleRow}>
                 <Text style={styles.balName}>
@@ -544,6 +560,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  smartLine: {
+    color: colors.positive,
+    fontSize: font.small,
+    fontWeight: '600',
+    marginBottom: 12,
+    lineHeight: 18,
   },
   actRow: {
     flexDirection: 'row',

@@ -45,5 +45,36 @@ export async function computeGroupBalances(groupId: string): Promise<GroupBalanc
     net: net.get(m.userId) ?? 0,
   }));
 
-  return { balances, debts: simplifyDebts(balances) };
+  const debts = simplifyDebts(balances);
+  return { balances, debts, naiveTransferCount: countNaiveTransfers(expenses, settlements) };
+}
+
+// The number of distinct person→person IOUs before simplification: each split
+// is a raw debt to the payer; net opposing pairs and count what's left. The gap
+// between this and `debts.length` is what "smart settle-up" saves.
+function countNaiveTransfers(
+  expenses: { paidById: string; splits: { userId: string; amount: number }[] }[],
+  settlements: { fromUserId: string; toUserId: string; amount: number }[],
+): number {
+  const owed = new Map<string, number>(); // "from|to" → amount `from` owes `to`
+  const add = (from: string, to: string, amt: number) => {
+    const k = `${from}|${to}`;
+    owed.set(k, (owed.get(k) ?? 0) + amt);
+  };
+  for (const e of expenses) {
+    for (const s of e.splits) if (s.userId !== e.paidById) add(s.userId, e.paidById, s.amount);
+  }
+  for (const st of settlements) add(st.fromUserId, st.toUserId, -st.amount);
+
+  const seen = new Set<string>();
+  let count = 0;
+  for (const [k, amt] of owed) {
+    const [a, b] = k.split('|');
+    const rev = `${b}|${a}`;
+    if (seen.has(k) || seen.has(rev)) continue;
+    seen.add(k);
+    seen.add(rev);
+    if (Math.abs(amt - (owed.get(rev) ?? 0)) > 0) count++;
+  }
+  return count;
 }
