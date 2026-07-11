@@ -239,7 +239,7 @@ export function GroupDetailScreen({ groupId, onBack }: { groupId: string; onBack
   return (
     <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={styles.content}>
       <Pressable onPress={onBack} hitSlop={12}>
-        <Text style={styles.back}>‹ Groups</Text>
+        <Text style={styles.back}>{group.data?.kind === 'DIRECT' ? '‹ Friends' : '‹ Groups'}</Text>
       </Pressable>
       <Text style={styles.title}>{group.data?.name ?? '…'}</Text>
 
@@ -481,34 +481,38 @@ export function GroupDetailScreen({ groupId, onBack }: { groupId: string; onBack
         </View>
       )}
 
-      {/* Members */}
-      <Text style={styles.section}>Members</Text>
-      <Card style={{ marginBottom: 16 }}>
-        {(group.data?.members ?? []).map((m: GroupMember) => (
-          <View key={m.userId} style={styles.balRow}>
-            <Text style={styles.balName}>
-              {m.name ?? m.phone}
-              {m.userId === user?.id ? ' (you)' : ''}
-            </Text>
-            <Text style={styles.muted}>{m.role.toLowerCase()}</Text>
-          </View>
-        ))}
-        <View style={{ height: 12 }} />
-        <Input
-          value={memberPhone}
-          onChangeText={setMemberPhone}
-          keyboardType="phone-pad"
-          placeholder="Add member by phone"
-        />
-        <View style={{ height: 10 }} />
-        <Button
-          label="Add member"
-          variant="ghost"
-          onPress={() => addMember.mutate()}
-          loading={addMember.isPending}
-          disabled={!memberPhone.trim()}
-        />
-      </Card>
+      {/* Members — groups only; a 1-on-1 is just you + the friend */}
+      {group.data?.kind !== 'DIRECT' ? (
+        <>
+          <Text style={styles.section}>Members</Text>
+          <Card style={{ marginBottom: 16 }}>
+            {(group.data?.members ?? []).map((m: GroupMember) => (
+              <View key={m.userId} style={styles.balRow}>
+                <Text style={styles.balName}>
+                  {m.name ?? m.phone}
+                  {m.userId === user?.id ? ' (you)' : ''}
+                </Text>
+                <Text style={styles.muted}>{m.role.toLowerCase()}</Text>
+              </View>
+            ))}
+            <View style={{ height: 12 }} />
+            <Input
+              value={memberPhone}
+              onChangeText={setMemberPhone}
+              keyboardType="phone-pad"
+              placeholder="Add member by phone"
+            />
+            <View style={{ height: 10 }} />
+            <Button
+              label="Add member"
+              variant="ghost"
+              onPress={() => addMember.mutate()}
+              loading={addMember.isPending}
+              disabled={!memberPhone.trim()}
+            />
+          </Card>
+        </>
+      ) : null}
     </ScrollView>
   );
 }

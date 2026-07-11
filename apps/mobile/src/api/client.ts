@@ -4,6 +4,7 @@ import type {
   UpdateExpense,
   CreateSettlement,
   FeedResponse,
+  Friend,
   NotificationList,
   Expense,
   Group,
@@ -105,6 +106,11 @@ export const api = {
     request<Settlement>('POST', `/v1/groups/${groupId}/settlements`, body),
   completeSettlement: (id: string, upiTxnRef?: string) =>
     request<Settlement>('POST', `/v1/settlements/${id}/complete`, { upiTxnRef }),
+
+  // friends (1-on-1)
+  friends: () => request<Friend[]>('GET', '/v1/friends'),
+  addFriend: (phone: string, name?: string) =>
+    request<Friend>('POST', '/v1/friends', name ? { phone, name } : { phone }),
 
   // feed
   feed: (limit = 40) => request<FeedResponse>('GET', `/v1/feed?limit=${limit}`),

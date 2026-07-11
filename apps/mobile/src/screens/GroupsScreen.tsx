@@ -36,7 +36,12 @@ export function GroupsScreen({
   const [newPhones, setNewPhones] = useState('');
   const [createErr, setCreateErr] = useState('');
 
+  const [friendPhone, setFriendPhone] = useState('');
+  const [friendName, setFriendName] = useState('');
+  const [friendErr, setFriendErr] = useState('');
+
   const groups = useQuery({ queryKey: ['groups'], queryFn: api.listGroups });
+  const friends = useQuery({ queryKey: ['friends'], queryFn: api.friends });
   const feed = useQuery({ queryKey: ['feed'], queryFn: () => api.feed() });
   const notifs = useQuery({ queryKey: ['notifications'], queryFn: () => api.notifications() });
   const unread = notifs.data?.unreadCount ?? 0;
@@ -74,6 +79,17 @@ export function GroupsScreen({
       qc.invalidateQueries({ queryKey: ['groups'] });
     },
     onError: (e) => setCreateErr(e instanceof ApiError ? e.message : 'Could not create group'),
+  });
+
+  const addFriend = useMutation({
+    mutationFn: () => api.addFriend(friendPhone.trim(), friendName.trim() || undefined),
+    onSuccess: () => {
+      setFriendPhone('');
+      setFriendName('');
+      setFriendErr('');
+      qc.invalidateQueries({ queryKey: ['friends'] });
+    },
+    onError: (e) => setFriendErr(e instanceof ApiError ? e.message : 'Could not add friend'),
   });
 
   const needsUpi = !user?.upiId;
@@ -174,6 +190,54 @@ export function GroupsScreen({
           <Text style={styles.emptyEmoji}>🧾</Text>
           <Text style={styles.emptyText}>No groups yet — create one above.</Text>
         </View>
+      )}
+
+      {/* Friends (1-on-1) */}
+      <Text style={[styles.section, { marginTop: 28 }]}>Friends</Text>
+      <Card style={{ marginBottom: 16 }}>
+        <Input
+          value={friendPhone}
+          onChangeText={setFriendPhone}
+          keyboardType="phone-pad"
+          placeholder="Friend's phone (+91…)"
+        />
+        <View style={{ height: 10 }} />
+        <Input value={friendName} onChangeText={setFriendName} placeholder="Name (optional)" />
+        <ErrorText>{friendErr}</ErrorText>
+        <View style={{ height: 12 }} />
+        <GradientButton
+          label="Add friend"
+          onPress={() => addFriend.mutate()}
+          loading={addFriend.isPending}
+          disabled={!friendPhone.trim()}
+        />
+      </Card>
+
+      {friends.isLoading ? (
+        <Text style={styles.muted}>Loading…</Text>
+      ) : friends.data && friends.data.length > 0 ? (
+        friends.data.map((f) => {
+          const label = f.name ?? f.phone ?? 'Friend';
+          const val =
+            f.net === 0
+              ? 'settled up'
+              : f.net > 0
+                ? `owes you ${rupees(f.net)}`
+                : `you owe ${rupees(-f.net)}`;
+          const color = f.net === 0 ? colors.muted : f.net > 0 ? colors.positive : colors.negative;
+          return (
+            <Pressable key={f.groupId} onPress={() => onOpen(f.groupId)} style={styles.groupCard}>
+              <Avatar name={label} id={f.userId} size={44} gradient />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.groupName}>{label}</Text>
+                <Text style={[styles.muted, { color }]}>{val}</Text>
+              </View>
+              <Text style={styles.chev}>›</Text>
+            </Pressable>
+          );
+        })
+      ) : (
+        <Text style={styles.muted}>No friends yet — add one to split 1-on-1.</Text>
       )}
 
       {/* Global activity feed */}
