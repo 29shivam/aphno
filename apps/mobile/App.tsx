@@ -3,9 +3,11 @@ import { ActivityIndicator, Image, SafeAreaView, StyleSheet, Text, View } from '
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './src/state/auth';
+import { useRealtime } from './src/state/realtime';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { GroupsScreen } from './src/screens/GroupsScreen';
 import { GroupDetailScreen } from './src/screens/GroupDetailScreen';
+import { NotificationsScreen } from './src/screens/NotificationsScreen';
 import { colors } from './src/theme';
 
 const queryClient = new QueryClient({
@@ -15,6 +17,10 @@ const queryClient = new QueryClient({
 function Root() {
   const { user, loading } = useAuth();
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Keep the real-time channel open whenever signed in.
+  useRealtime(Boolean(user));
 
   if (loading) {
     return (
@@ -28,11 +34,17 @@ function Root() {
 
   if (!user) return <LoginScreen />;
 
+  if (showNotifications) {
+    return <NotificationsScreen onBack={() => setShowNotifications(false)} />;
+  }
+
   if (openGroupId) {
     return <GroupDetailScreen groupId={openGroupId} onBack={() => setOpenGroupId(null)} />;
   }
 
-  return <GroupsScreen onOpen={setOpenGroupId} />;
+  return (
+    <GroupsScreen onOpen={setOpenGroupId} onOpenNotifications={() => setShowNotifications(true)} />
+  );
 }
 
 export default function App() {

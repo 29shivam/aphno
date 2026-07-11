@@ -3,6 +3,8 @@ import type {
   CreateExpense,
   UpdateExpense,
   CreateSettlement,
+  FeedResponse,
+  NotificationList,
   Expense,
   Group,
   GroupBalances,
@@ -103,7 +105,19 @@ export const api = {
     request<Settlement>('POST', `/v1/groups/${groupId}/settlements`, body),
   completeSettlement: (id: string, upiTxnRef?: string) =>
     request<Settlement>('POST', `/v1/settlements/${id}/complete`, { upiTxnRef }),
+
+  // feed
+  feed: (limit = 40) => request<FeedResponse>('GET', `/v1/feed?limit=${limit}`),
+
+  // notifications
+  notifications: (limit = 50) =>
+    request<NotificationList>('GET', `/v1/notifications?limit=${limit}`),
+  markNotificationsRead: (ids?: string[]) =>
+    request<{ updated: number }>('POST', '/v1/notifications/read', ids ? { ids } : {}),
 };
+
+// WebSocket URL for the real-time channel (http→ws, https→wss).
+export const wsUrl = () => `${BASE_URL.replace(/^http/, 'ws')}/v1/ws`;
 
 // ₹ formatting helpers (amounts are integer paise).
 export const rupees = (paise: number) => `₹${(paise / 100).toFixed(2)}`;

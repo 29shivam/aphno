@@ -2,12 +2,31 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../api/client';
+import type { FeedItem } from '@aphno/shared';
+import { api, ApiError, rupees } from '../api/client';
 import { useAuth } from '../state/auth';
 import { Avatar, Button, Card, ErrorText, GradientButton, Input } from '../ui';
 import { colors, font, gradients, radius } from '../theme';
 
-export function GroupsScreen({ onOpen }: { onOpen: (groupId: string) => void }) {
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'now';
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d}d`;
+  return new Date(iso).toLocaleDateString();
+}
+
+export function GroupsScreen({
+  onOpen,
+  onOpenNotifications,
+}: {
+  onOpen: (groupId: string) => void;
+  onOpenNotifications: () => void;
+}) {
   const { user, setUser, signOut } = useAuth();
   const qc = useQueryClient();
   const [showProfile, setShowProfile] = useState(false);
@@ -20,6 +39,27 @@ export function GroupsScreen({ onOpen }: { onOpen: (groupId: string) => void }) 
   const [createErr, setCreateErr] = useState('');
 
   const groups = useQuery({ queryKey: ['groups'], queryFn: api.listGroups });
+  const feed = useQuery({ queryKey: ['feed'], queryFn: () => api.feed() });
+  const notifs = useQuery({ queryKey: ['notifications'], queryFn: () => api.notifications() });
+  const unread = notifs.data?.unreadCount ?? 0;
+
+  // One-line summary of a feed item from the viewer's perspective.
+  const feedLine = (it: FeedItem): { title: string; sub: string; positive: boolean } => {
+    if (it.kind === 'settlement') {
+      const youPaid = it.fromId === user?.id;
+      const youGot = it.toId === user?.id;
+      const title = youPaid
+        ? `You paid ${it.toName}`
+        : youGot
+          ? `${it.fromName} paid you`
+          : `${it.fromName} paid ${it.toName}`;
+      return { title, sub: `${it.groupName} · ${timeAgo(it.at)}`, positive: youGot };
+    }
+    const you = it.actorId === user?.id;
+    const title = `${you ? 'You' : it.actorName} added “${it.description}”`;
+    const share = it.yourShare && !you ? ` · you owe ${rupees(it.yourShare)}` : '';
+    return { title, sub: `${it.groupName}${share} · ${timeAgo(it.at)}`, positive: false };
+  };
 
   const saveProfile = useMutation({
     mutationFn: () =>
@@ -63,9 +103,19 @@ export function GroupsScreen({ onOpen }: { onOpen: (groupId: string) => void }) 
             <Text style={styles.phone}>{user?.phone}</Text>
           </View>
         </View>
-        <Pressable onPress={() => setShowProfile((v) => !v)} style={styles.profileBtn}>
-          <Text style={styles.profileBtnText}>{showProfile ? 'Close' : 'Profile'}</Text>
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable onPress={onOpenNotifications} style={styles.bellBtn} hitSlop={8}>
+            <Text style={styles.bellIcon}>🔔</Text>
+            {unread > 0 ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable onPress={() => setShowProfile((v) => !v)} style={styles.profileBtn}>
+            <Text style={styles.profileBtnText}>{showProfile ? 'Close' : 'Profile'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Hero */}
@@ -162,6 +212,44 @@ export function GroupsScreen({ onOpen }: { onOpen: (groupId: string) => void }) 
           <Text style={styles.emptyText}>No groups yet — create one above.</Text>
         </View>
       )}
+
+      {/* Global activity feed */}
+      <Text style={[styles.section, { marginTop: 28 }]}>Activity</Text>
+      {feed.isLoading ? (
+        <Text style={styles.muted}>Loading…</Text>
+      ) : feed.data && feed.data.items.length > 0 ? (
+        feed.data.items.map((it) => {
+          const line = feedLine(it);
+          return (
+            <Pressable
+              key={`${it.kind}-${it.id}`}
+              onPress={() => onOpen(it.groupId)}
+              style={styles.feedRow}
+            >
+              {it.kind === 'settlement' ? (
+                <View style={styles.feedIcon}>
+                  <Text style={styles.feedIconText}>₹</Text>
+                </View>
+              ) : (
+                <Avatar name={it.actorName} id={it.actorId ?? it.id} size={38} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.feedTitle} numberOfLines={1}>
+                  {line.title}
+                </Text>
+                <Text style={styles.feedSub} numberOfLines={1}>
+                  {line.sub}
+                </Text>
+              </View>
+              <Text style={[styles.feedAmt, line.positive && { color: colors.positive }]}>
+                {rupees(it.amount)}
+              </Text>
+            </Pressable>
+          );
+        })
+      ) : (
+        <Text style={styles.muted}>No activity yet.</Text>
+      )}
     </ScrollView>
   );
 }
@@ -177,6 +265,56 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bellBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.cardAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellIcon: { fontSize: 17 },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: colors.negative,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.bg,
+  },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  feedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 10,
+  },
+  feedIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.positiveSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedIconText: { color: colors.positive, fontSize: 18, fontWeight: '800' },
+  feedTitle: { color: colors.text, fontSize: font.body, fontWeight: '700' },
+  feedSub: { color: colors.muted, fontSize: font.small, marginTop: 2 },
+  feedAmt: { color: colors.text, fontSize: font.h3, fontWeight: '800' },
   hi: { color: colors.text, fontSize: font.h2, fontWeight: '800' },
   phone: { color: colors.muted, fontSize: font.small, marginTop: 2 },
   profileBtn: {
