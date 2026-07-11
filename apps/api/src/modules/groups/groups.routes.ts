@@ -80,13 +80,15 @@ export async function groupsRoutes(fastify: FastifyInstance) {
     },
     async (req) => {
       const groups = await prisma.group.findMany({
-        where: { members: { some: { userId: req.userId } } },
+        // DIRECT groups are 1-on-1 friendships — surfaced under Friends, not here.
+        where: { kind: 'GROUP', members: { some: { userId: req.userId } } },
         orderBy: { createdAt: 'desc' },
         include: { _count: { select: { members: true } } },
       });
       return groups.map((g) => ({
         id: g.id,
         name: g.name,
+        kind: g.kind,
         createdById: g.createdById,
         createdAt: g.createdAt.toISOString(),
         memberCount: g._count.members,
@@ -173,6 +175,7 @@ async function serializeGroupDetail(groupId: string) {
   return {
     id: g.id,
     name: g.name,
+    kind: g.kind,
     createdById: g.createdById,
     createdAt: g.createdAt.toISOString(),
     memberCount: g.members.length,

@@ -71,12 +71,18 @@ model OtpChallenge {
   @@map("otp_challenges")
 }
 
+enum GroupKind {
+  GROUP
+  DIRECT // a 2-person friendship, split 1-on-1 (hidden from the groups list)
+}
+
 model Group {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
   name        String
-  createdById String   @map("created_by_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  kind        GroupKind @default(GROUP)
+  createdById String    @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   createdBy     User           @relation("GroupCreatedBy", fields: [createdById], references: [id])
   members       GroupMember[]

@@ -22,6 +22,7 @@ import { groupsRoutes } from './modules/groups/groups.routes.js';
 import { expensesRoutes } from './modules/expenses/expenses.routes.js';
 import { settlementsRoutes } from './modules/settlements/settlements.routes.js';
 import { feedRoutes } from './modules/feed/feed.routes.js';
+import { friendRoutes } from './modules/friends/friend.routes.js';
 import { notificationRoutes } from './modules/notifications/notification.routes.js';
 import { wsRoutes } from './platform/ws.routes.js';
 
@@ -117,6 +118,7 @@ export async function buildApp() {
   await app.register(expensesRoutes);
   await app.register(settlementsRoutes);
   await app.register(feedRoutes);
+  await app.register(friendRoutes);
   await app.register(notificationRoutes);
   await app.register(wsRoutes);
 

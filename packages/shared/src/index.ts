@@ -115,9 +115,13 @@ export const GroupMemberSchema = z.object({
 });
 export type GroupMember = z.infer<typeof GroupMemberSchema>;
 
+export const GroupKindSchema = z.enum(['GROUP', 'DIRECT']);
+export type GroupKind = z.infer<typeof GroupKindSchema>;
+
 export const GroupSchema = z.object({
   id: uuid,
   name: z.string(),
+  kind: GroupKindSchema,
   createdById: uuid,
   createdAt: z.string(),
   memberCount: z.number(),
@@ -128,6 +132,29 @@ export const GroupDetailSchema = GroupSchema.extend({
   members: z.array(GroupMemberSchema),
 });
 export type GroupDetail = z.infer<typeof GroupDetailSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Friends (1-on-1) — backed by a DIRECT group under the hood
+// ─────────────────────────────────────────────────────────────
+
+export const FriendSchema = z.object({
+  groupId: uuid, // the underlying DIRECT group to open for the 1:1 ledger
+  userId: uuid, // the friend
+  name: z.string().nullable(),
+  phone: z.string().nullable(),
+  upiId: z.string().nullable(),
+  // The viewer's net position with this friend: >0 they owe you, <0 you owe them.
+  net: z.number().int(),
+});
+export type Friend = z.infer<typeof FriendSchema>;
+
+export const FriendListSchema = z.array(FriendSchema);
+
+export const AddFriendSchema = z.object({
+  phone: PhoneSchema,
+  name: z.string().trim().min(1).max(80).optional(),
+});
+export type AddFriend = z.infer<typeof AddFriendSchema>;
 
 export const CreateGroupSchema = z.object({
   name: z.string().trim().min(1).max(80),
