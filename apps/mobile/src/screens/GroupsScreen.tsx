@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FeedItem } from '@aphno/shared';
 import { api, ApiError, rupees } from '../api/client';
 import { useAuth } from '../state/auth';
-import { Avatar, Button, Card, ErrorText, GradientButton, Input } from '../ui';
+import { Avatar, Card, ErrorText, GradientButton, Input } from '../ui';
 import { colors, font, gradients, radius } from '../theme';
 
 function timeAgo(iso: string): string {
@@ -23,16 +23,14 @@ function timeAgo(iso: string): string {
 export function GroupsScreen({
   onOpen,
   onOpenNotifications,
+  onOpenProfile,
 }: {
   onOpen: (groupId: string) => void;
   onOpenNotifications: () => void;
+  onOpenProfile: () => void;
 }) {
-  const { user, setUser, signOut } = useAuth();
+  const { user } = useAuth();
   const qc = useQueryClient();
-  const [showProfile, setShowProfile] = useState(false);
-  const [name, setName] = useState(user?.name ?? '');
-  const [upiId, setUpiId] = useState(user?.upiId ?? '');
-  const [profileErr, setProfileErr] = useState('');
 
   const [newName, setNewName] = useState('');
   const [newPhones, setNewPhones] = useState('');
@@ -60,17 +58,6 @@ export function GroupsScreen({
     const share = it.yourShare && !you ? ` · you owe ${rupees(it.yourShare)}` : '';
     return { title, sub: `${it.groupName}${share} · ${timeAgo(it.at)}`, positive: false };
   };
-
-  const saveProfile = useMutation({
-    mutationFn: () =>
-      api.updateMe({ name: name.trim() || undefined, upiId: upiId.trim() || undefined }),
-    onSuccess: (u) => {
-      setUser(u);
-      setShowProfile(false);
-      setProfileErr('');
-    },
-    onError: (e) => setProfileErr(e instanceof ApiError ? e.message : 'Could not save'),
-  });
 
   const createGroup = useMutation({
     mutationFn: () => {
@@ -112,8 +99,8 @@ export function GroupsScreen({
               </View>
             ) : null}
           </Pressable>
-          <Pressable onPress={() => setShowProfile((v) => !v)} style={styles.profileBtn}>
-            <Text style={styles.profileBtnText}>{showProfile ? 'Close' : 'Profile'}</Text>
+          <Pressable onPress={onOpenProfile} style={styles.profileBtn}>
+            <Text style={styles.profileBtnText}>Profile</Text>
           </Pressable>
         </View>
       </View>
@@ -134,38 +121,14 @@ export function GroupsScreen({
         </Text>
       </LinearGradient>
 
-      {needsUpi && !showProfile ? (
-        <Pressable onPress={() => setShowProfile(true)} style={styles.banner}>
+      {needsUpi ? (
+        <Pressable onPress={onOpenProfile} style={styles.banner}>
           <View style={styles.bannerDot} />
           <Text style={styles.bannerText}>
             Add your UPI ID so friends can pay you back in one tap
           </Text>
           <Text style={styles.bannerArrow}>→</Text>
         </Pressable>
-      ) : null}
-
-      {showProfile ? (
-        <Card style={{ marginBottom: 20 }}>
-          <Text style={styles.cardTitle}>Your profile</Text>
-          <Input label="Display name" value={name} onChangeText={setName} placeholder="Aarav" />
-          <View style={{ height: 12 }} />
-          <Input
-            label="UPI ID"
-            value={upiId}
-            onChangeText={setUpiId}
-            autoCapitalize="none"
-            placeholder="name@okhdfc"
-          />
-          <ErrorText>{profileErr}</ErrorText>
-          <View style={{ height: 14 }} />
-          <GradientButton
-            label="Save"
-            onPress={() => saveProfile.mutate()}
-            loading={saveProfile.isPending}
-          />
-          <View style={{ height: 8 }} />
-          <Button label="Sign out" variant="danger" onPress={signOut} />
-        </Card>
       ) : null}
 
       <Text style={styles.section}>New group</Text>

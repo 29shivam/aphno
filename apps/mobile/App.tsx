@@ -8,6 +8,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { GroupsScreen } from './src/screens/GroupsScreen';
 import { GroupDetailScreen } from './src/screens/GroupDetailScreen';
 import { NotificationsScreen } from './src/screens/NotificationsScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { colors } from './src/theme';
 
 const queryClient = new QueryClient({
@@ -18,6 +19,7 @@ function Root() {
   const { user, loading } = useAuth();
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Keep the real-time channel open whenever signed in.
   useRealtime(Boolean(user));
@@ -34,6 +36,10 @@ function Root() {
 
   if (!user) return <LoginScreen />;
 
+  if (showProfile) {
+    return <ProfileScreen onBack={() => setShowProfile(false)} />;
+  }
+
   if (showNotifications) {
     return <NotificationsScreen onBack={() => setShowNotifications(false)} />;
   }
@@ -43,7 +49,11 @@ function Root() {
   }
 
   return (
-    <GroupsScreen onOpen={setOpenGroupId} onOpenNotifications={() => setShowNotifications(true)} />
+    <GroupsScreen
+      onOpen={setOpenGroupId}
+      onOpenNotifications={() => setShowNotifications(true)}
+      onOpenProfile={() => setShowProfile(true)}
+    />
   );
 }
 
