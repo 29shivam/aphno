@@ -25,6 +25,14 @@ const EnvSchema = z.object({
   TWILIO_FROM_NUMBER: z.string().optional(),
   // Google OAuth Web Client ID (public). Required for Google sign-in.
   GOOGLE_CLIENT_ID: z.string().optional(),
+  // WhatsApp Cloud API (Meta) — preferred OTP channel when configured. Needs a
+  // WhatsApp Business phone number id, a permanent access token, and an approved
+  // authentication-category template (its body takes the code as one variable).
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_TEMPLATE_NAME: z.string().optional(),
+  WHATSAPP_TEMPLATE_LANG: z.string().default('en_US'),
+  WHATSAPP_API_VERSION: z.string().default('v21.0'),
 });
 
 export const env = EnvSchema.parse(process.env);

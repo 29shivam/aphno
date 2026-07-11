@@ -11,7 +11,7 @@ import {
 } from '@aphno/shared';
 import { env, isProd } from '../../platform/env.js';
 import { generateOtp, hashOtp, signJwt, verifyOtp } from '../../platform/crypto.js';
-import { sendOtpSms } from '../../platform/sms.js';
+import { deliverOtp } from '../../platform/otp-delivery.js';
 import { verifyGoogleIdToken } from '../../platform/google.js';
 import { normalizePhone } from '../../platform/phone.js';
 import { toUserDto } from '../users/user.dto.js';
@@ -41,8 +41,8 @@ export async function authRoutes(fastify: FastifyInstance) {
         data: { phone, codeHash: hashOtp(phone, code), expiresAt },
       });
 
-      // Deliver the code via SMS (Twilio). Falls back to logging when unconfigured.
-      await sendOtpSms(phone, code);
+      // Deliver over WhatsApp (preferred) → SMS → dev-log, per configuration.
+      await deliverOtp(phone, code);
 
       return {
         requestId: challenge.id,

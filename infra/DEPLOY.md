@@ -80,12 +80,39 @@ It must match everywhere — the API verifies the ID token's `aud` against
 `GOOGLE_CLIENT_ID` (see `apps/api/src/platform/google.ts`). Native iOS/Android
 builds additionally need `iosClientId`/`androidClientId` (separate credentials).
 
-## 4. CORS
+## 4. OTP delivery — WhatsApp (preferred), SMS (fallback)
+
+The API delivers login OTPs over the first configured channel: **WhatsApp** →
+**SMS** → dev-log (see `apps/api/src/platform/otp-delivery.ts`). WhatsApp is the
+recommended channel for India — free-tier authentication messages, no TRAI DLT.
+
+**Meta setup (one-time, done in Meta Business):**
+
+1. Create a **Meta Business** account and a **WhatsApp Business App** at
+   [developers.facebook.com](https://developers.facebook.com) → add the
+   **WhatsApp** product.
+2. Note the test **Phone number ID**, and generate a **permanent access token**
+   (System User token with `whatsapp_business_messaging`).
+3. Create an **Authentication**-category **message template** whose body has one
+   variable (the code) and a copy-code/one-tap button. Wait for approval.
+4. Set these on Railway (Service → Variables):
+
+   | Variable                   | Value                                      |
+   | -------------------------- | ------------------------------------------ |
+   | `WHATSAPP_PHONE_NUMBER_ID` | the WhatsApp Business phone number id      |
+   | `WHATSAPP_ACCESS_TOKEN`    | permanent access token                     |
+   | `WHATSAPP_TEMPLATE_NAME`   | your approved authentication template name |
+   | `WHATSAPP_TEMPLATE_LANG`   | template language, e.g. `en_US` (default)  |
+
+Once set, OTP requests are delivered over WhatsApp automatically. If the WhatsApp
+vars are absent but Twilio (`TWILIO_*`) is set, it falls back to SMS.
+
+## 5. CORS
 
 The API currently allows all origins (`origin: true`). Before going fully public,
 lock CORS in `apps/api/src/app.ts` to your Vercel domain.
 
-## 5. Mobile app (EAS)
+## 6. Mobile app (EAS)
 
 See [`apps/mobile/README.md`](../apps/mobile/README.md). Set the app's
 `EXPO_PUBLIC_API_URL` to the Railway URL, then:
