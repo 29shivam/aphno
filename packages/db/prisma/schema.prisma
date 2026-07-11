@@ -32,8 +32,29 @@ model User {
   splits          ExpenseSplit[]
   settlementsFrom Settlement[]   @relation("SettlementFrom")
   settlementsTo   Settlement[]   @relation("SettlementTo")
+  notifications   Notification[]
 
   @@map("users")
+}
+
+// In-app notification for a single recipient. Append-only log; `readAt` tracks
+// read state. `data` carries lightweight context (ids/amounts) for deep links.
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String // EXPENSE_ADDED | EXPENSE_EDITED | SETTLEMENT_RECEIVED
+  title     String
+  body      String
+  groupId   String?   @map("group_id") @db.Uuid
+  data      Json?
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 // One-time-password challenge for phone auth.
@@ -57,10 +78,11 @@ model Group {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  createdBy   User          @relation("GroupCreatedBy", fields: [createdById], references: [id])
-  members     GroupMember[]
-  expenses    Expense[]
-  settlements Settlement[]
+  createdBy     User           @relation("GroupCreatedBy", fields: [createdById], references: [id])
+  members       GroupMember[]
+  expenses      Expense[]
+  settlements   Settlement[]
+  notifications Notification[]
 
   @@index([createdById])
   @@map("groups")

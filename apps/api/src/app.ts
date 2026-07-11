@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import websocket from '@fastify/websocket';
 import {
   serializerCompiler,
   validatorCompiler,
@@ -20,6 +21,9 @@ import { usersRoutes } from './modules/users/users.routes.js';
 import { groupsRoutes } from './modules/groups/groups.routes.js';
 import { expensesRoutes } from './modules/expenses/expenses.routes.js';
 import { settlementsRoutes } from './modules/settlements/settlements.routes.js';
+import { feedRoutes } from './modules/feed/feed.routes.js';
+import { notificationRoutes } from './modules/notifications/notification.routes.js';
+import { wsRoutes } from './platform/ws.routes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -104,6 +108,7 @@ export async function buildApp() {
   });
 
   await app.register(authPlugin);
+  await app.register(websocket);
 
   await app.register(healthRoutes);
   await app.register(authRoutes);
@@ -111,6 +116,9 @@ export async function buildApp() {
   await app.register(groupsRoutes);
   await app.register(expensesRoutes);
   await app.register(settlementsRoutes);
+  await app.register(feedRoutes);
+  await app.register(notificationRoutes);
+  await app.register(wsRoutes);
 
   return app;
 }

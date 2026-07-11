@@ -11,6 +11,7 @@ import {
 } from '@aphno/shared';
 import { buildUpiIntent } from '../../platform/upi.js';
 import { assertMember } from '../groups/group.service.js';
+import { notifySettlementReceived } from '../notifications/notification.service.js';
 
 const GroupIdParam = z.object({ id: uuid });
 const SettlementIdParam = z.object({ id: uuid });
@@ -111,8 +112,22 @@ export async function settlementsRoutes(fastify: FastifyInstance) {
           settledAt: new Date(),
           upiTxnRef: req.body.upiTxnRef ?? null,
         },
-        include: { toUser: true },
+        include: {
+          toUser: true,
+          fromUser: { select: { name: true, phone: true } },
+          group: { select: { name: true } },
+        },
       });
+
+      await notifySettlementReceived({
+        toUserId: settlement.toUserId,
+        fromName: settlement.fromUser.name ?? settlement.fromUser.phone ?? 'Someone',
+        amount: settlement.amount,
+        groupId: settlement.groupId,
+        groupName: settlement.group.name,
+        settlementId: settlement.id,
+      });
+
       return serializeSettlement(settlement);
     },
   );

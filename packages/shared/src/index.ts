@@ -254,3 +254,67 @@ export const SettlementSchema = z.object({
   upiIntentUrl: z.string().nullable(),
 });
 export type Settlement = z.infer<typeof SettlementSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Notifications (DTOs)
+// ─────────────────────────────────────────────────────────────
+
+export const NotificationSchema = z.object({
+  id: uuid,
+  type: z.string(),
+  title: z.string(),
+  body: z.string(),
+  groupId: uuid.nullable(),
+  data: z.record(z.unknown()).nullable(),
+  read: z.boolean(),
+  createdAt: z.string(),
+});
+export type Notification = z.infer<typeof NotificationSchema>;
+
+export const NotificationListSchema = z.object({
+  items: z.array(NotificationSchema),
+  unreadCount: z.number().int(),
+});
+export type NotificationList = z.infer<typeof NotificationListSchema>;
+
+// Omit `ids` to mark every unread notification as read.
+export const MarkReadSchema = z.object({
+  ids: z.array(uuid).optional(),
+});
+export type MarkRead = z.infer<typeof MarkReadSchema>;
+
+// Real-time event pushed over the WebSocket when a new notification arrives.
+export const RealtimeNotificationEventSchema = z.object({
+  type: z.literal('notification'),
+  notification: NotificationSchema,
+});
+export type RealtimeNotificationEvent = z.infer<typeof RealtimeNotificationEventSchema>;
+
+// ─────────────────────────────────────────────────────────────
+// Global activity feed (DTOs)
+// ─────────────────────────────────────────────────────────────
+
+export const FeedItemSchema = z.object({
+  kind: z.enum(['expense', 'settlement']),
+  id: uuid,
+  groupId: uuid,
+  groupName: z.string(),
+  at: z.string(),
+  amount: z.number().int(),
+  // Expense items
+  actorId: uuid.nullable(),
+  actorName: z.string().nullable(),
+  description: z.string().nullable(),
+  yourShare: z.number().int().nullable(),
+  // Settlement items
+  fromId: uuid.nullable(),
+  fromName: z.string().nullable(),
+  toId: uuid.nullable(),
+  toName: z.string().nullable(),
+});
+export type FeedItem = z.infer<typeof FeedItemSchema>;
+
+export const FeedResponseSchema = z.object({
+  items: z.array(FeedItemSchema),
+});
+export type FeedResponse = z.infer<typeof FeedResponseSchema>;

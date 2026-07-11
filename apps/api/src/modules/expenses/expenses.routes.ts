@@ -12,6 +12,30 @@ import {
 } from '@aphno/shared';
 import { splitEqual, splitExact, splitPercent } from '../../platform/money.js';
 import { assertMember } from '../groups/group.service.js';
+import { notifyExpense } from '../notifications/notification.service.js';
+
+// Side-effect: notify the other participants that an expense was added/edited.
+// Resolves the actor + group names, then hands off to the notification service.
+async function fireExpenseNotification(
+  groupId: string,
+  actorId: string,
+  expense: { id: string; description: string; splits: { userId: string; amount: number }[] },
+  edited: boolean,
+) {
+  const [group, actor] = await Promise.all([
+    prisma.group.findUnique({ where: { id: groupId }, select: { name: true } }),
+    prisma.user.findUnique({ where: { id: actorId }, select: { name: true, phone: true } }),
+  ]);
+  await notifyExpense(
+    { id: expense.id, groupId, description: expense.description, splits: expense.splits },
+    {
+      actorId,
+      actorName: actor?.name ?? actor?.phone ?? 'Someone',
+      groupName: group?.name ?? 'your group',
+      edited,
+    },
+  );
+}
 
 const GroupIdParam = z.object({ id: uuid });
 const ExpenseIdParam = z.object({ id: uuid });
@@ -103,6 +127,8 @@ export async function expensesRoutes(fastify: FastifyInstance) {
         },
         include: { splits: true },
       });
+
+      await fireExpenseNotification(req.params.id, req.userId, expense, false);
 
       reply.status(201);
       return serializeExpense(expense);
@@ -198,6 +224,8 @@ export async function expensesRoutes(fastify: FastifyInstance) {
           include: { splits: true },
         });
       });
+
+      await fireExpenseNotification(existing.groupId, req.userId, updated, true);
 
       return serializeExpense(updated);
     },
